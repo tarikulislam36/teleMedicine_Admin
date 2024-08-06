@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Room Details</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 p-4">
+    <div class="container mx-auto">
+        <h1 class="text-3xl font-bold mb-6 text-center">Room Details</h1>
+        <div id="room-details" class="bg-white p-6 rounded shadow-md"></div>
+        <button onclick="goBack()" class="mt-4 bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700">Back to Admin Page</button>
+    </div>
+
+    <script>
+        function goBack() {
+            window.history.back();
+        }
+
+        function getTableName() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('q');
+        }
+
+        // Fetch room details and display them
+        fetch(`/roomDetails?q=${getTableName()}`)
+            .then(response => response.json())
+            .then(data => {
+                const roomDetails = document.getElementById('room-details');
+                if (data.length > 0) {
+                    const room = data[0];
+                    let detailsHTML = `<h2 class="text-2xl font-semibold mb-4">Room Details</h2>`;
+                    for (const [key, value] of Object.entries(room)) {
+                        detailsHTML += `<p class="mb-2"><strong>${key}:</strong> ${value}</p>`;
+                    }
+                    roomDetails.innerHTML = detailsHTML;
+                } else {
+                    roomDetails.innerHTML = `<p>No details found for the specified table: ${getTableName()}</p>`;
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching room details:', error);
+            });
+    </script>
+</body>
+</html>
