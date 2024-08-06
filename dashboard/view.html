@@ -8,8 +8,9 @@
 </head>
 <body class="bg-gray-100 p-4">
     <div class="container mx-auto">
-        <h1 class="text-3xl font-bold mb-6 text-center">Room Details</h1>
-        <div id="room-details" class="bg-white p-6 rounded shadow-md"></div>
+        <h1 class="text-3xl font-bold mb-6 text-center">Room Activity</h1>
+        <div id="room-details" class="bg-white p-6 rounded shadow-md mb-4"></div>
+        <div id="sub-tables-details" class="bg-white p-6 rounded shadow-md"></div>
         <button onclick="goBack()" class="mt-4 bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700">Back to Admin Page</button>
     </div>
 
@@ -23,20 +24,51 @@
             return urlParams.get('q');
         }
 
-        // Fetch room details and display them
+        function formatDate(dateString) {
+            if (!dateString) return 'NULL';
+            const options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+            return new Date(dateString).toLocaleString('en-GB', options).replace(',', '');
+        }
+
+        function displayTable(data, container, title) {
+            if (data.length > 0) {
+                let tableHTML = `<h2 class="text-2xl font-semibold mb-4">${title}</h2>`;
+                tableHTML += '<table class="min-w-full bg-white border border-gray-200"><thead><tr>';
+                for (const key in data[0]) {
+                    tableHTML += `<th class="py-2 px-4 border-b text-left">${key}</th>`;
+                }
+                tableHTML += '</tr></thead><tbody>';
+                data.forEach(row => {
+                    tableHTML += '<tr>';
+                    for (const key in row) {
+                        const value = (key.includes('time') || key.includes('date')) ? formatDate(row[key]) : row[key];
+                        tableHTML += `<td class="py-2 px-4 border-b">${value}</td>`;
+                    }
+                    tableHTML += '</tr>';
+                });
+                tableHTML += '</tbody></table>';
+                container.innerHTML = tableHTML;
+            } else {
+                container.innerHTML = `<p>No details found for the specified table: ${getTableName()}</p>`;
+            }
+        }
+
         fetch(`/roomDetails?q=${getTableName()}`)
             .then(response => response.json())
             .then(data => {
                 const roomDetails = document.getElementById('room-details');
-                if (data.length > 0) {
-                    const room = data[0];
-                    let detailsHTML = `<h2 class="text-2xl font-semibold mb-4">Room Details</h2>`;
-                    for (const [key, value] of Object.entries(room)) {
-                        detailsHTML += `<p class="mb-2"><strong>${key}:</strong> ${value}</p>`;
-                    }
-                    roomDetails.innerHTML = detailsHTML;
+                const subTablesDetails = document.getElementById('sub-tables-details');
+
+                displayTable(data.mainTable, roomDetails, 'Room Details');
+
+                if (data.subTables.length > 0) {
+                    data.subTables.forEach(subTable => {
+                        const subTableContainer = document.createElement('div');
+                        subTablesDetails.appendChild(subTableContainer);
+                        displayTable(subTable.subTableDData, subTableContainer, `Activity of (${subTable.subTableDName})`);
+                    });
                 } else {
-                    roomDetails.innerHTML = `<p>No details found for the specified table: ${getTableName()}</p>`;
+                    subTablesDetails.innerHTML = `<p>No details found for the sub-tables.</p>`;
                 }
             })
             .catch(error => {

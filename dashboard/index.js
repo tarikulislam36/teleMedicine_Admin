@@ -18,7 +18,6 @@ connection.connect((err) => {
     console.log('Connected to MySQL as id ' + connection.threadId);
 });
 
-// Serve static files from the "public" directory
 app.use(express.static('public'));
 
 app.get('/admin', (req, res) => {
@@ -44,18 +43,59 @@ app.get('/admin/roomIDs', (req, res) => {
 
 app.get('/roomDetails', (req, res) => {
     const tableName = req.query.q;
-    const selectSQL = `SELECT * FROM ??`;
+    const selectSQL = `SELECT id,creator_name,start_datetime,Sub_table_d FROM ??`; 
 
     connection.query(selectSQL, [tableName], (selectErr, selectResults) => {
         if (selectErr) {
             console.error('Error retrieving room details: ' + selectErr.stack);
             res.status(500).send('Error retrieving room details');
-        } else {
-            res.json(selectResults);
+            return;
         }
+
+        if (selectResults.length === 0) {
+            res.json({ mainTable: [], subTables: [] });
+            return;
+        }
+
+        let subTablesData = [];
+
+        const fetchSubTableData = (index) => {
+            if (index >= selectResults.length) {
+                res.json({
+                    mainTable: selectResults,
+                    subTables: subTablesData
+                });
+                return;
+            }
+
+            const subTableD = selectResults[index].Sub_table_d;
+
+            connection.query(`SELECT * FROM ??`, [subTableD], (subTableDErr, subTableDResults) => {
+                if (subTableDErr) {
+                    console.error('Error retrieving sub-table details: ' + subTableDErr.stack);
+                    res.status(500).send('Error retrieving sub-table details');
+                    return;
+                }
+
+                subTablesData.push({
+                    subTableDName: subTableD,
+                    subTableDData: subTableDResults
+                });
+
+                fetchSubTableData(index + 1);
+            });
+        };
+
+        fetchSubTableData(0);
     });
 });
 
 app.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);
+});
+
+
+// End the mysql connection when the app is closed
+process.on('exit', () => {
+    connection.end();
 });
