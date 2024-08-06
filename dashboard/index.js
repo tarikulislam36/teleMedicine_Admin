@@ -1,7 +1,13 @@
 const express = require('express');
 const mysql = require('mysql');
+const fs = require('fs');
+const https = require('https');
 const app = express();
 const port = 9000;
+
+const key = fs.readFileSync('/etc/letsencrypt/live/test.findnewcars.com/privkey.pem');
+const cert = fs.readFileSync('/etc/letsencrypt/live/test.findnewcars.com/fullchain.pem');
+const sslOptions = { key, cert };
 
 const connection = mysql.createConnection({
     host: 'localhost',
@@ -90,10 +96,11 @@ app.get('/roomDetails', (req, res) => {
     });
 });
 
-app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
-});
+const server = https.createServer(sslOptions, app);
 
+server.listen(port, () => {
+    console.log(`Server is running on ${port}`);
+});
 
 // End the mysql connection when the app is closed
 process.on('exit', () => {
